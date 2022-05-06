@@ -28,11 +28,15 @@ from launch_ros.parameters_type import SomeParameters
 from launch_ros.remap_rule_type import SomeRemapRules
 from launch.action import Action
 from launch.condition import Condition
+
+from launch.conditions import IfCondition, UnlessCondition
 from launch.substitutions import LocalSubstitution
 
 from launch.utilities import ensure_argument_type
 from launch.utilities import perform_substitutions
 from launch.utilities import normalize_to_list_of_substitutions
+from launch.frontend import expose_action
+from launch.frontend import Entity, Parser
 
 from launch_ros.actions import Node
 from launch_ros.parameter_descriptions import ParameterFile
@@ -54,6 +58,8 @@ from ..events import LoadNodeEvent
 import composition_interfaces.srv
 
 from .composable_node_container import ComposableNodeContainer
+
+@expose_action("composable_node_exp")
 class ComposableNode(Action):
     """Action that adds a node to a container for execution."""
     UNSPECIFIED_NODE_NAME = '<node_name_unspecified>'
@@ -109,6 +115,63 @@ class ComposableNode(Action):
         self.__substitutions_performed = False
         self.__loaded = False
         self.__logger = launch.logging.get_logger(__name__)
+
+    @classmethod
+    def parse(cls, entity: Entity, parser: Parser):
+        """Parse composable_lc_node."""
+        _, kwargs = super().parse(entity, parser)
+
+        component = entity.get_attr('component', optional=True)
+        if component is not None:
+            kwargs['component'] = parser.parse_substitution(component)
+        
+        package = entity.get_attr('pkg', optional=True)
+        if package is not None:
+            kwargs['package'] = parser.parse_substitution(package)
+
+        target_container = entity.get_attr('target_container', optional=True)
+        if target_container is not None:
+            kwargs['target_container'] = parser.parse_substitution(target_container)
+
+        name = entity.get_attr('name', optional=True)
+        if name is not None:
+            kwargs['name'] = parser.parse_substitution(name)
+
+        namespace = entity.get_attr('namespace', optional=True)
+        if namespace is not None:
+            kwargs['namespace'] = parser.parse_substitution(namespace)
+        else:
+            kwargs['namespace'] = ""
+        
+        parameters = entity.get_attr('param', data_type=List[Entity], optional=True)
+        if parameters is not None:
+            kwargs['parameters'] = Node.parse_nested_parameters(parameters, parser)
+
+        remappings = entity.get_attr('remap', data_type=List[Entity], optional=True)
+        if remappings is not None:
+            kwargs['remappings'] = [
+                (
+                    parser.parse_substitution(remap.get_attr('from')),
+                    parser.parse_substitution(remap.get_attr('to'))
+                ) for remap in remappings
+            ]
+
+            for remap in remappings:
+                remap.assert_entity_completely_parsed()
+
+        extra_arguments = entity.get_attr('extra_arg', data_type=List[Entity], optional=True)
+        if extra_arguments is not None:
+            kwargs['extra_arguments'] = [
+                {
+                    tuple(parser.parse_substitution(extra_arg.get_attr('name'))):
+                    parser.parse_substitution(extra_arg.get_attr('value'))
+                } for extra_arg in extra_arguments
+            ]
+
+            for extra_arg in extra_arguments:
+                extra_arg.assert_entity_completely_parsed()
+
+        return cls, kwargs
 
     @property
     def node_name(self):

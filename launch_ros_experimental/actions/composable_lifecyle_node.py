@@ -1,5 +1,8 @@
 from typing import List, Optional, cast
 from .composable_node import ComposableNode
+from launch.frontend import expose_action
+from launch.frontend import Entity
+from launch.frontend import Parser
 
 import functools
 import threading
@@ -13,7 +16,7 @@ import lifecycle_msgs
 
 
 
-
+@expose_action("composable_lc_node")
 class ComposableLifecycleNode(ComposableNode):
     def __init__(
             self, 
@@ -74,7 +77,6 @@ class ComposableLifecycleNode(ComposableNode):
             )
 
     def _on_change_state_event(self, context: launch.LaunchContext) -> None:
-        print("caught")
         typed_event = cast(ChangeState, context.locals.event)
         if not typed_event.lifecycle_node_matcher(self):
             return None
@@ -82,6 +84,15 @@ class ComposableLifecycleNode(ComposableNode):
         request.transition.id = typed_event.transition_id
         context.add_completion_future(
             context.asyncio_loop.run_in_executor(None, self._call_change_state, request, context))
+
+
+    @classmethod
+    def parse(cls, entity: Entity, parser: Parser):
+        """Parse composable_lc_node."""
+        _, kwargs = super().parse(entity, parser)        
+
+        return cls, kwargs
+
 
 
     def execute(self, context: LaunchContext) -> Optional[List[Action]]:

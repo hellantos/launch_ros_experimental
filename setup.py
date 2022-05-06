@@ -20,7 +20,8 @@ setup(
     license='Apache-2.0',
     tests_require=['pytest'],
     entry_points={
-        'console_scripts': [
+        'launch.frontend.launch_extension': [
+            'launch_ros_experimental = launch_ros_experimental',
         ],
     },
 )

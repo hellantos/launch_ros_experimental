@@ -12,6 +12,9 @@ from launch_ros.ros_adapters import get_ros_node
 import composition_interfaces
 # from launch_ros_experimental.actions.composable_node import ComposableNode
 from launch_ros_experimental.events.load_node_event import LoadNodeEvent 
+from launch.frontend import expose_action
+from launch.frontend import Entity, Parser
+@expose_action("container_exp")
 class ComposableNodeContainer(Node):
     
     def __init__(
@@ -115,6 +118,12 @@ class ComposableNodeContainer(Node):
                     response.error_message
                 )
             )
+
+    @classmethod
+    def parse(cls, entity: Entity, parser: Parser):
+        """Parse node_container."""
+        _, kwargs = super().parse(entity, parser)
+        return cls, kwargs
 
     def execute(self, context: LaunchContext) -> Optional[List[Action]]:
         """
