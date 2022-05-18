@@ -1,3 +1,17 @@
+# Copyright 2022 Christoph Hellmann Santos
+#
+# Licensed under the Apache License, Version 2.0 (the "License");
+# you may not use this file except in compliance with the License.
+# You may obtain a copy of the License at
+#
+#     http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing, software
+# distributed under the License is distributed on an "AS IS" BASIS,
+# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+# See the License for the specific language governing permissions and
+# limitations under the License.
+
 from typing import List, Optional, cast
 from .composable_node import ComposableNode
 from launch.frontend import expose_action
@@ -15,23 +29,23 @@ from launch_ros.events.lifecycle import ChangeState, StateTransition
 import lifecycle_msgs
 
 
-
 @expose_action("composable_lc_node")
 class ComposableLifecycleNode(ComposableNode):
     def __init__(
-            self, 
-            *,
-            name: SomeSubstitutionsType,
-            namespace: SomeSubstitutionsType,
-            **kwargs 
-        ):
+        self,
+        *,
+        name: SomeSubstitutionsType,
+        namespace: SomeSubstitutionsType,
+        **kwargs
+    ):
         super().__init__(name=name, namespace=namespace, **kwargs)
 
     def _on_transition_event(self, context, msg):
         try:
             event = StateTransition(action=self, msg=msg)
             self.__current_state = ChangeState.valid_states[msg.goal_state.id]
-            context.asyncio_loop.call_soon_threadsafe(lambda: context.emit_event_sync(event))
+            context.asyncio_loop.call_soon_threadsafe(
+                lambda: context.emit_event_sync(event))
         except Exception as exc:
             self.__logger.error(
                 "Exception in handling of 'lifecycle.msg.TransitionEvent': {}".format(exc))
@@ -85,20 +99,19 @@ class ComposableLifecycleNode(ComposableNode):
         context.add_completion_future(
             context.asyncio_loop.run_in_executor(None, self._call_change_state, request, context))
 
-
     @classmethod
     def parse(cls, entity: Entity, parser: Parser):
         """Parse composable_lc_node."""
-        _, kwargs = super().parse(entity, parser)        
+        _, kwargs = super().parse(entity, parser)
 
         return cls, kwargs
 
-
-
     def execute(self, context: LaunchContext) -> Optional[List[Action]]:
-        self._perform_substitutions(context)  # ensure self.node_name is expanded
+        # ensure self.node_name is expanded
+        self._perform_substitutions(context)
         if '<node_name_unspecified>' in self.node_name:
-            raise RuntimeError('node_name unexpectedly incomplete for lifecycle node')
+            raise RuntimeError(
+                'node_name unexpectedly incomplete for lifecycle node')
         node = get_ros_node(context)
         # Create a subscription to monitor the state changes of the subprocess.
         self.__rclpy_subscription = node.create_subscription(
@@ -113,7 +126,7 @@ class ComposableLifecycleNode(ComposableNode):
         # Register an event handler to change states on a ChangeState lifecycle event.
         context.register_event_handler(launch.EventHandler(
             matcher=lambda event: isinstance(event, ChangeState),
-            entities=[launch.actions.OpaqueFunction(function=self._on_change_state_event)],
+            entities=[launch.actions.OpaqueFunction(
+                function=self._on_change_state_event)],
         ))
         return super().execute(context)
-    
