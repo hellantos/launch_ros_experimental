@@ -67,4 +67,19 @@ def generate_launch_description():
     return launch.LaunchDescription([container, node, lifecycle_node, lifecycle_node_1, lifecycle_transition])
 
 ```
+
+Usage in XML frontend:
+
+```xml
+<launch>
+    <container_exp name="container" exec="component_container" pkg="rclcpp_components" namespace="" output="screen"/>
+    <composable_node_exp name="talker" component="composition::Talker" pkg="composition" target_container="container"/>
+    <composable_lc_node name="lc_talker" component="composition::LifecycleTalker" pkg="composition" target_container="container"/>
+    <transition>
+        <lifecycle_node name="lc_talker"/>
+        <transition label="configure"/>
+        <transition label="activate"/>
+    </transition>
+</launch>
+```
 For testing you can use https://github.com/ipa-cmh/demos/tree/lifecycle_components which has the composition LifecycleTalker component.
